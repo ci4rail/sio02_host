@@ -18,16 +18,14 @@ import (
 	"log"
 	"os"
 
-	"github.com/ci4rail/sio01_host/devsim/internal/eloc"
-	"github.com/ci4rail/sio01_host/devsim/pkg/version"
+	"github.com/ci4rail/sio02_host/devsim/internal/tracelet"
+	"github.com/ci4rail/sio02_host/devsim/pkg/version"
 	"github.com/spf13/cobra"
 )
 
 var (
 	deviceID              string
-	statusServerPort      int
 	locationServerAddress string
-	mdnsIP                string
 )
 
 func main() {
@@ -41,11 +39,11 @@ func main() {
 var rootCmd = &cobra.Command{
 	Use:   "devsim",
 	Short: "tracelet simulator",
-	Long:  `Simulate a tracelet like SIO01`,
+	Long:  `Simulate a tracelet like SIO02`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Printf("devsim version: %s\n", version.Version)
 
-		_, err := eloc.NewInstance(deviceID, statusServerPort, locationServerAddress, mdnsIP)
+		_, err := tracelet.NewInstance(deviceID, locationServerAddress)
 
 		if err != nil {
 			log.Fatalf("Failed to create eloc instance: %s", err)
@@ -56,7 +54,5 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&deviceID, "dev-id", "d", "devsim", "device id to use")
-	rootCmd.PersistentFlags().IntVarP(&statusServerPort, "stat-port", "s", 10000, "TCP port to use for status server")
 	rootCmd.PersistentFlags().StringVarP(&locationServerAddress, "loc-srv", "l", "127.0.0.1:11002", "IP address of location server with port")
-	rootCmd.PersistentFlags().StringVarP(&mdnsIP, "mdns-ip", "", "", "IP address to advertise status server to")
 }
