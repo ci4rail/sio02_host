@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import socketserver
+import time
 import threading
-import tracelet_location_pb2
+# ensure that the io4edge_api package is in the PYTHONPATH
+import io4edge_api.tracelet.python.v1.tracelet_pb2 as tracelet_pb2
 import struct
+
 
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
@@ -17,13 +20,39 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         print('new handler %s\n' % threading.current_thread().name)
+        self.command_thread_exit = False
+        self.command_thread = threading.Thread(target=self.command_requester)
+        self.command_thread.start()
         while True:
-            loc = self.read_fstream()
+            m = self.read_fstream()
+            loc = m.location
+            #print(loc)
             print(
-                f'{loc.tracelet_id} {loc.receive_ts.ToDatetime()} {loc.x:.2f} {loc.y:.2f} {loc.z:.2f} '
-                f'cov: {loc.cov_xx:.2f} {loc.cov_xy:.2f} {loc.cov_yy:.2f} site:{loc.site_id} sign: {loc.location_signature}')
+                f'{m.tracelet_id} {m.receive_ts.ToDatetime()}\n'
+                f'   UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} ite:{loc.uwb.site_id}\n'
+                f'  GNSS  valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} {loc.gnss.eph:.2f}\n')
 
         print('exit handler %s\n' % threading.current_thread().name)
+
+    def server_close(self):
+        print('server close')
+        self.command_thread_exit = True
+        self.command_thread.join()
+        super().server_close()    
+
+    def command_requester(self):
+        while not self.command_thread_exit:
+            time.sleep(3)
+            statusReq = tracelet_pb2.ServerToTracelet.StatusRequest()
+            req = tracelet_pb2.ServerToTracelet(id=1)
+            req.status.CopyFrom(statusReq)
+            data = req.SerializeToString()
+            self.send(data)
+        print("exit command requester")
+
+    def send(self, data):
+        hdr = struct.pack("<HL", 0xEDFE, len(data))
+        self.request.sendall(hdr + data)
 
     def rcv_all(self, n):
         remaining = n
@@ -40,7 +69,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             len = struct.unpack('<L', hdr[2:6])[0]
             # print(f'len={len} {hdr[0:6]}')
             proto_data = self.rcv_all(len)
-            loc = tracelet_location_pb2.LocationReport()
+            loc = tracelet_pb2.TraceletToServer()
             loc.ParseFromString(proto_data)
             return loc
         else:
@@ -54,8 +83,10 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 if __name__ == '__main__':
     HOST, PORT = '0.0.0.0', 11002
 
-    # Create the server, binding to localhost on port 9999
+    # Create the server, binding to localhost on specified port
     server = ThreadedTCPServer((HOST, PORT), MyTCPHandler)
+
+
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C

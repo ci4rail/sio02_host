@@ -20,8 +20,6 @@ type Tracelet struct {
 	deviceID             string
 	loc                  location
 	locMutex             sync.Mutex // mutex to protect loc
-	haveServerConnection bool
-	havePosition         bool
 }
 
 // NewInstance creates a new Easylocate simulator instance
