@@ -8,9 +8,9 @@ Executables can be found [here](https://github.com/ci4rail/SIO02_host/releases).
 ## Functionality
 
 * Sends tracelet location messages to the localization server every 0.5s
-    * Every 1.5s the content of the location message is changed, see `locationGenerator` function in `./devsim/internal/tracelet/location.go`
+    * Every 1.5s the content of the location message is changed, see `locationGenerator` function in `/devsim/internal/tracelet/location.go`
 * Responds to status requests from the localization server
-    * Answers with fixed values, see `commandHandler` function in `./devsim/internal/tracelet/location.go`
+    * Answers with fixed values, see `commandHandler` function in `/devsim/internal/tracelet/location.go`
 
 ## Usage
 
@@ -22,7 +22,7 @@ Run `devsim` on one computer and your host code (e.g. `examples/location_server.
 * `devsim` on computer A at IP: `192.168.0.100`
 * `location_server` on computer B at IP: `192.168.0.200`
 
-On computer B, you must have this repo
+On computer B, clone this repo
 
 ```bash
 $ git clone https://github.com/ci4rail/sio02_host.git --recursive
@@ -75,9 +75,12 @@ message from devsim, ts=2023-02-22 07:24:47.912741
 * `devsim` on computer A at IP: `192.168.0.100`
 * `location_server` on computer B at IP: `192.168.0.200`
 
-On computer B, have the `examples` folder of this repo
+On computer B, clone this repo
 
 ```
+> git clone https://github.com/ci4rail/sio02_host.git --recursive
+> cd sio02_host
+> set PYTHONPATH=%cd%
 > cd examples
 > pip3 install -r requirements.txt
 > python location_server.py
@@ -90,19 +93,10 @@ On computer A, download the `devsim` binary for the binary for your platform [fr
 > devsim.exe -l 192.168.0.200:11002
 ```
 
-On Computer B, open a second command prompt and execute the status client
-
-```
-> python status_client.py devsim
-```
-
-The outputs should be similar as for Linux above.
 
 ### Running devsim and Host Code on the Same Machine
 
-It is possible to  run `devsim` and the host code on the same computer if
-* the OS is Linux
-* the OS is Windows and the status server within `devsim` is not needed
+It is possible to  run `devsim` and the host code on the same computer.
 
 Example for Linux:
 
@@ -112,5 +106,5 @@ $ ./location_server.py
 ```
 Run devsim in a second terminal:
 ```bash
-./devsim --mdns-ip=127.0.0.1 -l 127.0.0.1:11002
+./devsim -l 127.0.0.1:11002
 ```
