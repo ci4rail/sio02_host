@@ -1,34 +1,16 @@
 # sio02_host
-Host examples and protobuf files for SIO02 device
+Host examples and protobuf files for SIO02 "Tracelet"
 
 ## Protobuf definitions
-The `proto` folder contains
+The `proto` files can be found [here](./io4edge_api/tracelet/proto/v1/tracelet.proto)
 ...
 
 ## Examples
 
 The `examples` folder contains some simple examples in python:
-* [location_server](examples/location_server.py): A TCP server that receives location messages from SIO02 devices and prints the location.
+* [location_server](examples/location_server.py): A TCP server that receives location messages from SIO02 devices and prints the contents.
 
-### Usage
+# Usage
+- [SIO02-Device-Simulator](README_DEVSIM.md): A SIO02 simulator
 
-Prerequisites:
-* Linux machine
-* Python >= 3.9 installed
-
-```bash
-cd examples
-pip3 install -r requirements.txt
-```
-
-#### Run location server:
-```bash
-./location_server.py
-```
-On the SIO02, configure parameter `loc-srv` to the IP address of the machine executing `location_server.py` and port 11002, e.g. `192.168.0.200:11002`.
-
-
-# See also
-- [SIO01-Device-Simulator](README_DEVSIM.md): A SIO01 simulator
-
-- [io4edge-cli](https://github.com/ci4rail/io4edge-client-go): Contains a command line tool to manage io4edge devices, such as the SIO02. 
+- [io4edge-cli](https://github.com/ci4rail/io4edge-client-go): Contains a command line tool to manage io4edge devices, such as the SIO02.
