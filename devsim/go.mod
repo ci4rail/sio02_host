@@ -2,8 +2,6 @@ module github.com/ci4rail/sio02_host/devsim
 
 go 1.18
 
-replace github.com/ci4rail/io4edge_api => /home/klaus/work/sio02_host/io4edge_api
-
 require (
 	github.com/ci4rail/io4edge-client-go v1.6.0
 	github.com/ci4rail/io4edge_api v0.14.1-0.20230221121216-fdade5a58e29
