@@ -7,15 +7,14 @@ Executables can be found [here](https://github.com/ci4rail/SIO02_host/releases).
 
 ## Functionality
 
-TODO
-* Sends tracelet location messages to a TCP server
-    * simulating a moving vehicle with approx 10km/h
-* Acts as a status server for a monitoring system
-    * Status server is announced via zeroconf/mdns
+* Sends tracelet location messages to the localization server every 0.5s
+    * Every 1.5s the content of the location message is changed, see `locationGenerator` function in `./devsim/internal/tracelet/location.go`
+* Responds to status requests from the localization server
+    * Answers with fixed values, see `commandHandler` function in `./devsim/internal/tracelet/location.go`
 
 ## Usage
 
-Please run `devsim` on one computer and your host code (e.g. `examples/location_server.py`) on another computer.
+Run `devsim` on one computer and your host code (e.g. `examples/location_server.py`) on another computer.
 
 
 ### Testing with Linux Machines
@@ -23,9 +22,10 @@ Please run `devsim` on one computer and your host code (e.g. `examples/location_
 * `devsim` on computer A at IP: `192.168.0.100`
 * `location_server` on computer B at IP: `192.168.0.200`
 
-On computer B, have the `examples` folder of this repo
+On computer B, you must have this repo
 
 ```bash
+$ export PYTHONPATH=/path/to/this/repo
 $ cd examples
 $ pip3 install -r requirements.txt
 $ ./location_server.py
@@ -42,30 +42,30 @@ You should see something like this:
 
 On Computer A:
 ```
-2022/01/07 20:18:06 devsim version: dev
-2022/01/07 20:18:06 mdns advertisting service on IPs [192.168.0.100]
-2022/01/07 20:18:06 locationGenerator: havePos=true x=-100.00 y=-100.00
-2022/01/07 20:18:07 locationGenerator: havePos=true x=-96.80 y=-96.80
-2022/01/07 20:18:08 locationGenerator: havePos=true x=-93.60 y=-93.60
+2023/02/22 08:24:27 devsim version: dev
+2023/02/22 08:24:27 try to connect to 127.0.0.1:11002
+locationClient WriteMessage: receive_ts:{seconds:1677050686 nanos:910927234} tracelet_id:"devsim" location:{gnss:{valid:true latitude:49.425111 longitude:11.077378 altitude:350 eph:0.4 epv:2.5} uwb:{y:1100 z:888 site_id:4660 location_signature:20015998348237 cov_xx:11.1 cov_xy:12.2} speed:9 mileage:50899 temperature:34.5}
+locationClient WriteMessage: receive_ts:{seconds:1677050687 nanos:411838137} tracelet_id:"devsim" location:{gnss:{valid:true latitude:49.425111 longitude:11.077378 altitude:350 eph:0.4 epv:2.5} uwb:{y:1100 z:888 site_id:4660 location_signature:20015998348237 cov_xx:11.1 cov_xy:12.2} speed:9 mileage:50899 temperature:34.5}
+locationClient WriteMessage: receive_ts:{seconds:1677050687 nanos:912741641} tracelet_id:"devsim" location:{gnss:{latitude:49.425111 longitude:11.077378 altitude:350 eph:0.4 epv:2.5} uwb:{valid:true x:5 y:6.21 z:7.5 site_id:4660 location_signature:20015998348237 cov_xx:11.1 cov_xy:12.2} speed:9 mileage:50899 temperature:34.5}
 ...
 ```
 
 On Computer B:
 ```
-devsim 2022-01-07 20:18:07.516261 -96.80 3.20 site:12345 sign: 5124095577148911
-devsim 2022-01-07 20:18:08.520163 -93.60 6.40 site:12345 sign: 5124095577148911
-```
+new handler Thread-1
 
-On Computer B, open a second shell and execute the status client
-
-```bash
-$ ./status_client.py devsim
-192.168.0.100 10000
-0 power ups
-has server connection
-has valid time
-has valid position
-eloc module status is ok
+message from devsim, ts=2023-02-22 07:24:46.910927
+  devsim 2023-02-22 07:24:46.910927
+     UWB: valid False 0.00 1100.00 ite:4660
+    GNSS: valid True 49.425111 11.077378 0.40
+message from devsim, ts=2023-02-22 07:24:47.411838
+  devsim 2023-02-22 07:24:47.411838
+     UWB: valid False 0.00 1100.00 ite:4660
+    GNSS: valid True 49.425111 11.077378 0.40
+message from devsim, ts=2023-02-22 07:24:47.912741
+  devsim 2023-02-22 07:24:47.912741
+     UWB: valid True 5.00 6.21 ite:4660
+    GNSS: valid False 49.425111 11.077378 0.40
 ```
 
 ### Testing Location Messages with Windows Machines

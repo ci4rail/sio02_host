@@ -25,14 +25,17 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.command_thread.start()
         while True:
             m = self.read_fstream()
-            loc = m.location
-            #print(loc)
-            print(
-                f'{m.tracelet_id} {m.receive_ts.ToDatetime()}\n'
-                f'   UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} ite:{loc.uwb.site_id}\n'
-                f'  GNSS  valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} {loc.gnss.eph:.2f}\n')
+            print(f'message from {m.tracelet_id}, ts={m.receive_ts.ToDatetime()}')
+            t = m.WhichOneof('type')
+            if t == 'status':
+                print(f'  status: powerups: {m.status.power_up_count}')
+            elif t == 'location':
+                loc = m.location
+                print(
+                    f'  {m.tracelet_id} {m.receive_ts.ToDatetime()}\n'
+                    f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} ite:{loc.uwb.site_id}\n'
+                    f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} {loc.gnss.eph:.2f}')
 
-        print('exit handler %s\n' % threading.current_thread().name)
 
     def server_close(self):
         print('server close')

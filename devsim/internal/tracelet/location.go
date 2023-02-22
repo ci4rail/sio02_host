@@ -42,6 +42,7 @@ type location struct {
 func (e *Tracelet) locationClient(locationServerAddress string) error {
 	go func() {
 		for {
+			log.Printf("try to connect to %v\n", locationServerAddress)
 			ch, err := channelFromSocketAddress(locationServerAddress)
 
 			if err == nil {
@@ -49,7 +50,7 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 				quit := make(chan bool)
 				var wg sync.WaitGroup
 				wg.Add(1)
-				go e.commandHandler(ch, quit)
+				go e.commandHandler(ch, quit, &wg)
 				for {
 					m := e.makeLocationMessage()
 					t2s := e.makeTraceletToServerMessage(0)
@@ -64,7 +65,10 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 					}
 					time.Sleep(500 * time.Millisecond)
 				}
-				quit <- true
+				select {
+				case quit <- true:
+				default:
+				}
 				wg.Wait()
 			}
 			time.Sleep(500 * time.Millisecond)
@@ -73,7 +77,8 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 	return nil
 }
 
-func (e *Tracelet) commandHandler(ch *client.Channel, quit chan bool) {
+func (e *Tracelet) commandHandler(ch *client.Channel, quit chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case <-quit:
@@ -83,8 +88,8 @@ func (e *Tracelet) commandHandler(ch *client.Channel, quit chan bool) {
 			m := &pb.ServerToTracelet{}
 			err := ch.ReadMessage(m, 0)
 			if err != nil {
-				log.Printf("commandHandler ReadMessage failed, %v\n", err)
-				continue
+				log.Printf("commandHandler ReadMessage failed, %v. Exit command handler\n", err)
+				return
 			}
 			t2s := e.makeTraceletToServerMessage(m.Id)
 
