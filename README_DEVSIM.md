@@ -25,7 +25,9 @@ Run `devsim` on one computer and your host code (e.g. `examples/location_server.
 On computer B, you must have this repo
 
 ```bash
-$ export PYTHONPATH=/path/to/this/repo
+$ git clone https://github.com/ci4rail/sio02_host.git --recursive
+$ cd sio02_host
+$ export PYTHONPATH=`pwd`
 $ cd examples
 $ pip3 install -r requirements.txt
 $ ./location_server.py
