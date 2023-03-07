@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/ci4rail/io4edge-client-go v1.6.0
-	github.com/ci4rail/io4edge_api v0.14.1-0.20230221121216-fdade5a58e29
+	github.com/ci4rail/io4edge_api v0.14.1-0.20230307114752-09075232fa06
 	github.com/spf13/cobra v1.6.1
 	google.golang.org/protobuf v1.28.1
 )
