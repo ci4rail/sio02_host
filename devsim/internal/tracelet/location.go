@@ -28,14 +28,15 @@ import (
 )
 
 type location struct {
-	uwb_valid  bool
-	uwb_x      float64
-	uwb_y      float64
-	uwb_z      float64
-	gnss_valid bool
-	gnss_lat   float64
-	gnss_lon   float64
-	gnss_alt   float64
+	uwbValid  bool
+	uwbX      float64
+	uwbY      float64
+	uwbZ      float64
+	gnssValid bool
+	gnssLat   float64
+	gnssLon   float64
+	gnssAlt   float64
+	gnssFix   int32
 }
 
 // publish location to server periodically
@@ -131,7 +132,8 @@ func (e *Tracelet) makeTraceletToServerMessage(id int32) *pb.TraceletToServer {
 	return &pb.TraceletToServer{
 		Id:         id,
 		TraceletId: e.deviceID,
-		ReceiveTs:  timestamppb.Now(),
+		Ignition:   true,
+		DeliveryTs: timestamppb.Now(),
 	}
 }
 
@@ -140,22 +142,22 @@ func (e *Tracelet) makeLocationMessage() *pb.TraceletToServer_Location {
 	defer e.locMutex.Unlock()
 	return &pb.TraceletToServer_Location{
 		Gnss: &pb.TraceletToServer_Location_Gnss{
-			Valid:     e.loc.gnss_valid,
-			Latitude:  e.loc.gnss_lat,
-			Longitude: e.loc.gnss_lon,
-			Altitude:  e.loc.gnss_alt,
+			Valid:     e.loc.gnssValid,
+			Latitude:  e.loc.gnssLat,
+			Longitude: e.loc.gnssLon,
+			Altitude:  e.loc.gnssAlt,
 			Eph:       0.4,
 			Epv:       2.5,
+			FixType:   e.loc.gnssFix,
 		},
 		Uwb: &pb.TraceletToServer_Location_Uwb{
-			Valid:             e.loc.uwb_valid,
-			X:                 e.loc.uwb_x,
-			Y:                 e.loc.uwb_y,
-			Z:                 e.loc.uwb_z,
+			Valid:             e.loc.uwbValid,
+			X:                 e.loc.uwbX,
+			Y:                 e.loc.uwbY,
+			Z:                 e.loc.uwbZ,
 			SiteId:            0x1234,
 			LocationSignature: 0x12345678ABCD,
-			CovXx:             11.1,
-			CovXy:             12.2,
+			Eph:               0.6,
 		},
 		Direction:   pb.TraceletToServer_Location_NO_DIRECTION,
 		Speed:       9,
@@ -169,14 +171,15 @@ func (e *Tracelet) locationGenerator() {
 
 		for {
 			loc := location{
-				uwb_valid:  true,
-				uwb_x:      5.0,
-				uwb_y:      6.21,
-				uwb_z:      7.5,
-				gnss_valid: false,
-				gnss_lat:   49.425111,
-				gnss_lon:   11.077378,
-				gnss_alt:   350.0,
+				uwbValid:  true,
+				uwbX:      5.0,
+				uwbY:      6.21,
+				uwbZ:      7.5,
+				gnssValid: false,
+				gnssLat:   49.425111,
+				gnssLon:   11.077378,
+				gnssAlt:   350.0,
+				gnssFix:   0,
 			}
 			e.locMutex.Lock()
 			e.loc = loc
@@ -185,14 +188,15 @@ func (e *Tracelet) locationGenerator() {
 			time.Sleep(1000 * time.Millisecond)
 
 			loc = location{
-				uwb_valid:  false,
-				uwb_x:      0,
-				uwb_y:      1100,
-				uwb_z:      888,
-				gnss_valid: true,
-				gnss_lat:   49.425111,
-				gnss_lon:   11.077378,
-				gnss_alt:   350.0,
+				uwbValid:  false,
+				uwbX:      0,
+				uwbY:      1100,
+				uwbZ:      888,
+				gnssValid: true,
+				gnssLat:   49.425111,
+				gnssLon:   11.077378,
+				gnssAlt:   350.0,
+				gnssFix:   2,
 			}
 			e.locMutex.Lock()
 			e.loc = loc

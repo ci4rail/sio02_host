@@ -8,7 +8,6 @@ import io4edge_api.tracelet.python.v1.tracelet_pb2 as tracelet_pb2
 import struct
 
 
-
 class MyTCPHandler(socketserver.BaseRequestHandler):
     """
     The RequestHandler class for our server.
@@ -25,23 +24,21 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.command_thread.start()
         while True:
             m = self.read_fstream()
-            print(f'message from {m.tracelet_id}, ts={m.receive_ts.ToDatetime()}')
+            print(f'message from {m.tracelet_id}, ts={m.delivery_ts.ToDatetime()}')
             t = m.WhichOneof('type')
             if t == 'status':
                 print(f'  status: powerups: {m.status.power_up_count}')
             elif t == 'location':
                 loc = m.location
                 print(
-                    f'  {m.tracelet_id} {m.receive_ts.ToDatetime()}\n'
-                    f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} ite:{loc.uwb.site_id}\n'
-                    f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} {loc.gnss.eph:.2f}')
-
+                    f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n'
+                    f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}')
 
     def server_close(self):
         print('server close')
         self.command_thread_exit = True
         self.command_thread.join()
-        super().server_close()    
+        super().server_close()
 
     def command_requester(self):
         while not self.command_thread_exit:
@@ -88,8 +85,6 @@ if __name__ == '__main__':
 
     # Create the server, binding to localhost on specified port
     server = ThreadedTCPServer((HOST, PORT), MyTCPHandler)
-
-
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C

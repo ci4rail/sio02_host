@@ -44,11 +44,14 @@ You should see something like this:
 
 On Computer A:
 ```
-2023/02/22 08:24:27 devsim version: dev
-2023/02/22 08:24:27 try to connect to 127.0.0.1:11002
-locationClient WriteMessage: receive_ts:{seconds:1677050686 nanos:910927234} tracelet_id:"devsim" location:{gnss:{valid:true latitude:49.425111 longitude:11.077378 altitude:350 eph:0.4 epv:2.5} uwb:{y:1100 z:888 site_id:4660 location_signature:20015998348237 cov_xx:11.1 cov_xy:12.2} speed:9 mileage:50899 temperature:34.5}
-locationClient WriteMessage: receive_ts:{seconds:1677050687 nanos:411838137} tracelet_id:"devsim" location:{gnss:{valid:true latitude:49.425111 longitude:11.077378 altitude:350 eph:0.4 epv:2.5} uwb:{y:1100 z:888 site_id:4660 location_signature:20015998348237 cov_xx:11.1 cov_xy:12.2} speed:9 mileage:50899 temperature:34.5}
-locationClient WriteMessage: receive_ts:{seconds:1677050687 nanos:912741641} tracelet_id:"devsim" location:{gnss:{latitude:49.425111 longitude:11.077378 altitude:350 eph:0.4 epv:2.5} uwb:{valid:true x:5 y:6.21 z:7.5 site_id:4660 location_signature:20015998348237 cov_xx:11.1 cov_xy:12.2} speed:9 mileage:50899 temperature:34.5}
+2023/03/07 13:07:03 devsim version: dev
+2023/03/07 13:07:03 try to connect to localhost:11002
+locationClient WriteMessage: delivery_ts:{seconds:1678190826  nanos:816572605}  tracelet_id:"devsim"  ignition:true  location:{gnss:{valid:true  latitude:49.425111  longitude:11.077378  altitude:350  eph:0.4  epv:2.5  fix_type:2}  uwb:{y:1100  z:888  site_id:4660  location_signature:20015998348237  eph:0.6}  speed:9  mileage:50899  temperature:34.5}
+locationClient WriteMessage: delivery_ts:{seconds:1678190827  nanos:317934758}  tracelet_id:"devsim"  ignition:true  location:{gnss:{valid:true  latitude:49.425111  longitude:11.077378  altitude:350  eph:0.4  epv:2.5  fix_type:2}  uwb:{y:1100  z:888  site_id:4660  location_signature:20015998348237  eph:0.6}  speed:9  mileage:50899  temperature:34.5}
+locationClient WriteMessage: delivery_ts:{seconds:1678190827  nanos:818179811}  tracelet_id:"devsim"  ignition:true  location:{gnss:{valid:true  latitude:49.425111  longitude:11.077378  altitude:350  eph:0.4  epv:2.5  fix_type:2}  uwb:{y:1100  z:888  site_id:4660  location_signature:20015998348237  eph:0.6}  speed:9  mileage:50899  temperature:34.5}
+locationClient WriteMessage: delivery_ts:{seconds:1678190828  nanos:318526164}  tracelet_id:"devsim"  ignition:true  location:{gnss:{latitude:49.425111  longitude:11.077378  altitude:350  eph:0.4  epv:2.5}  uwb:{valid:true  x:5  y:6.21  z:7.5  site_id:4660  location_signature:20015998348237  eph:0.6}  speed:9  mileage:50899  temperature:34.5}
+locationClient WriteMessage: delivery_ts:{seconds:1678190828  nanos:819445917}  tracelet_id:"devsim"  ignition:true  location:{gnss:{latitude:49.425111  longitude:11.077378  altitude:350  eph:0.4  epv:2.5}  uwb:{valid:true  x:5  y:6.21  z:7.5  site_id:4660  location_signature:20015998348237  eph:0.6}  speed:9  mileage:50899  temperature:34.5}
+locationClient WriteMessage: delivery_ts:{seconds:1678190829  nanos:320449270}  tracelet_id:"devsim"  ignition:true  location:{gnss:{valid:true  latitude:49.425111  longitude:11.077378  altitude:350  eph:0.4  epv:2.5  fix_type:2}  uwb:{y:1100  z:888  site_id:4660  location_signature:20015998348237  eph:0.6}  speed:9  mileage:50899  temperature:34.5}
 ...
 ```
 
@@ -56,18 +59,21 @@ On Computer B:
 ```
 new handler Thread-1
 
-message from devsim, ts=2023-02-22 07:24:46.910927
-  devsim 2023-02-22 07:24:46.910927
-     UWB: valid False 0.00 1100.00 ite:4660
-    GNSS: valid True 49.425111 11.077378 0.40
-message from devsim, ts=2023-02-22 07:24:47.411838
-  devsim 2023-02-22 07:24:47.411838
-     UWB: valid False 0.00 1100.00 ite:4660
-    GNSS: valid True 49.425111 11.077378 0.40
-message from devsim, ts=2023-02-22 07:24:47.912741
-  devsim 2023-02-22 07:24:47.912741
-     UWB: valid True 5.00 6.21 ite:4660
-    GNSS: valid False 49.425111 11.077378 0.40
+message from devsim, ts=2023-03-07 12:07:06.816572
+     UWB: valid False 0.00 1100.00 site:4660 eph 0.6
+    GNSS: valid True 49.425111 11.077378 eph 0.40
+message from devsim, ts=2023-03-07 12:07:07.317934
+     UWB: valid False 0.00 1100.00 site:4660 eph 0.6
+    GNSS: valid True 49.425111 11.077378 eph 0.40
+message from devsim, ts=2023-03-07 12:07:07.818179
+     UWB: valid False 0.00 1100.00 site:4660 eph 0.6
+    GNSS: valid True 49.425111 11.077378 eph 0.40
+message from devsim, ts=2023-03-07 12:07:08.318526
+     UWB: valid True 5.00 6.21 site:4660 eph 0.6
+    GNSS: valid False 49.425111 11.077378 eph 0.40
+message from devsim, ts=2023-03-07 12:07:08.819445
+     UWB: valid True 5.00 6.21 site:4660 eph 0.6
+    GNSS: valid False 49.425111 11.077378 eph 0.40
 ```
 
 ### Testing Location Messages with Windows Machines
