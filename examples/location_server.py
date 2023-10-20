@@ -6,7 +6,11 @@ import threading
 # ensure that the io4edge_api package is in the PYTHONPATH
 import io4edge_api.tracelet.python.v1.tracelet_pb2 as tracelet_pb2
 import struct
+import datetime
 
+
+last_ts = None
+max_delta = None
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     """
@@ -20,8 +24,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         print('new handler %s\n' % threading.current_thread().name)
         self.command_thread_exit = False
-        self.command_thread = threading.Thread(target=self.command_requester)
-        self.command_thread.start()
+        #self.command_thread = threading.Thread(target=self.command_requester)
+        #self.command_thread.start()
         while True:
             m = self.read_fstream()
             print(f'message from {m.tracelet_id}, ts={m.delivery_ts.ToDatetime()}')
@@ -33,11 +37,20 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 print(
                     f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n'
                     f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}')
+                global last_ts, max_delta
+                if last_ts is not None:
+                    delta = datetime.datetime.now() - last_ts
+
+                    if max_delta is None or delta > max_delta:
+                        max_delta = delta
+
+                    print(f'delta: {delta}, max delta: {max_delta}')
+                last_ts = datetime.datetime.now()
 
     def server_close(self):
         print('server close')
         self.command_thread_exit = True
-        self.command_thread.join()
+        #self.command_thread.join()
         super().server_close()
 
     def command_requester(self):
@@ -70,7 +83,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             # print(f'len={len} {hdr[0:6]}')
             proto_data = self.rcv_all(len)
             loc = tracelet_pb2.TraceletToServer()
-            loc.ParseFromString(proto_data)
+            loc.ParseFromString(bytes(proto_data))
             return loc
         else:
             raise RuntimeError('bad magic')
