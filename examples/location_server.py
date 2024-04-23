@@ -3,6 +3,7 @@
 import socketserver
 import time
 import threading
+
 # ensure that the io4edge_api package is in the PYTHONPATH
 import io4edge_api.tracelet.python.v1.tracelet_pb2 as tracelet_pb2
 import struct
@@ -18,24 +19,26 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     """
 
     def handle(self):
-        print('new handler %s\n' % threading.current_thread().name)
+        print("new handler %s\n" % threading.current_thread().name)
         self.command_thread_exit = False
         self.command_thread = threading.Thread(target=self.command_requester)
         self.command_thread.start()
         while True:
             m = self.read_fstream()
-            print(f'message from {m.tracelet_id}, ts={m.delivery_ts.ToDatetime()}')
-            t = m.WhichOneof('type')
-            if t == 'status':
-                print(f'  status: powerups: {m.status.power_up_count}')
-            elif t == 'location':
+            print(f"message from {m.tracelet_id}, ts={m.delivery_ts.ToDatetime()}")
+            t = m.WhichOneof("type")
+            if t == "status":
+                print(f"  status: powerups: {m.status.power_up_count}")
+            elif t == "location":
                 loc = m.location
                 print(
-                    f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n'
-                    f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}')
+                    f"     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n"
+                    f"    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}\n",
+                    f"   Fused: valid {loc.fused.valid} {loc.fused.latitude:.6f} {loc.fused.longitude:.6f} eph {loc.fused.eph:.2f}",
+                )
 
     def server_close(self):
-        print('server close')
+        print("server close")
         self.command_thread_exit = True
         self.command_thread.join()
         super().server_close()
@@ -65,23 +68,24 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
     def read_fstream(self):
         hdr = self.rcv_all(6)
-        if hdr[0:2] == b'\xfe\xed':
-            len = struct.unpack('<L', hdr[2:6])[0]
+        if hdr[0:2] == b"\xfe\xed":
+            len = struct.unpack("<L", hdr[2:6])[0]
             # print(f'len={len} {hdr[0:6]}')
             proto_data = self.rcv_all(len)
+            proto_data = bytes(proto_data)
             loc = tracelet_pb2.TraceletToServer()
             loc.ParseFromString(proto_data)
             return loc
         else:
-            raise RuntimeError('bad magic')
+            raise RuntimeError("bad magic")
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 
-if __name__ == '__main__':
-    HOST, PORT = '0.0.0.0', 11002
+if __name__ == "__main__":
+    HOST, PORT = "0.0.0.0", 11002
 
     # Create the server, binding to localhost on specified port
     server = ThreadedTCPServer((HOST, PORT), MyTCPHandler)
