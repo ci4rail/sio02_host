@@ -17,12 +17,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/ci4rail/io4edge-client-go/client"
-	"github.com/ci4rail/io4edge-client-go/transport"
-	"github.com/ci4rail/io4edge-client-go/transport/socket"
 	pb "github.com/ci4rail/io4edge_api/tracelet/go/tracelet"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -51,11 +50,11 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 				quit := make(chan bool)
 				var wg sync.WaitGroup
 				wg.Add(1)
-				go e.commandHandler(ch, quit, &wg)
 				for {
 					m := e.makeLocationMessage()
 					t2s := e.makeTraceletToServerMessage(0)
 					t2s.Type = &pb.TraceletToServer_Location_{Location: m}
+					t2s.Metrics = makeMetricsMessage()
 
 					fmt.Printf("locationClient WriteMessage: %v\n", t2s)
 
@@ -72,60 +71,10 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 				}
 				wg.Wait()
 			}
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 		}
 	}()
 	return nil
-}
-
-func (e *Tracelet) commandHandler(ch *client.Channel, quit chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		select {
-		case <-quit:
-			log.Print("commandHandler quit\n")
-			return
-		default:
-			m := &pb.ServerToTracelet{}
-			err := ch.ReadMessage(m, 0)
-			if err != nil {
-				log.Printf("commandHandler ReadMessage failed, %v. Exit command handler\n", err)
-				return
-			}
-			t2s := e.makeTraceletToServerMessage(m.Id)
-
-			switch x := m.Type.(type) {
-			case *pb.ServerToTracelet_Location:
-				{
-					fmt.Printf("commandHandler Location: %v\n", m)
-					m := e.makeLocationMessage()
-					t2s.Type = &pb.TraceletToServer_Location_{Location: m}
-				}
-			case *pb.ServerToTracelet_Status:
-				{
-					fmt.Printf("commandHandler Status: %v\n", m)
-					m := &pb.TraceletToServer_StatusResponse{
-						PowerUpCount:     123,
-						HasTime:          true,
-						UwbModuleStatus:  0,
-						GnssModuleStatus: 0,
-						Imu1Status:       0,
-						TachoStatus:      777,
-					}
-					t2s.Type = &pb.TraceletToServer_Status{Status: m}
-				}
-			default:
-				{
-					fmt.Printf("commandHandler unknown message type: %v\n", x)
-					continue
-				}
-			}
-			err = ch.WriteMessage(t2s)
-			if err != nil {
-				log.Printf("commandHandler WriteMessage failed, %v\n", err)
-			}
-		}
-	}
 }
 
 func (e *Tracelet) makeTraceletToServerMessage(id int32) *pb.TraceletToServer {
@@ -209,13 +158,28 @@ func (e *Tracelet) locationGenerator() {
 
 }
 
-func channelFromSocketAddress(address string) (*client.Channel, error) {
-	t, err := socket.NewSocketConnection(address)
-	if err != nil {
-		return nil, errors.New("can't create connection: " + err.Error())
-	}
-	ms := transport.NewFramedStreamFromTransport(t)
-	ch := client.NewChannel(ms)
+// generate some random metrics
+func makeMetricsMessage() *pb.TraceletMetrics {
+	return &pb.TraceletMetrics{
+		Health__Type__UwbComm:     1,
+		Health__Type__UwbFirmware: 0,
+		Health__Type__GnssComm:    1,
+		FreeHeapBytes:             int64(rand.Intn(1000) + 20000),
 
-	return ch, nil
+		GnssFixTypeEnum:                 int64(rand.Intn(6)),
+		GnssHeading__Info__HeadVehValid: 1,
+		GnssHeading__Info__HeadVeh:      float64(rand.Intn(360)),
+		GnssHeading__Info__HeadMot:      float64(rand.Intn(360)),
+		NtripIsConnected:                0,
+		SpeedMetersPerSecond:            float64(rand.Intn(100)),
+	}
+}
+
+func channelFromSocketAddress(address string) (*client.Channel, error) {
+	c, err := client.NewUDPClientFromSocketAddress(address)
+	if err != nil {
+		return nil, errors.New("can't create UDP client: " + err.Error())
+	}
+
+	return c.Ch, nil
 }
