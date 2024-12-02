@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 Ci4Rail GmbH
+Copyright © 2024 Ci4Rail GmbH
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/ci4rail/io4edge-client-go/client"
@@ -41,20 +40,21 @@ type location struct {
 // publish location to server periodically
 func (e *Tracelet) locationClient(locationServerAddress string) error {
 	go func() {
+		loopCnt := 0
 		for {
 			log.Printf("try to connect to %v\n", locationServerAddress)
 			ch, err := channelFromSocketAddress(locationServerAddress)
 
 			if err == nil {
 				defer ch.Close()
-				quit := make(chan bool)
-				var wg sync.WaitGroup
-				wg.Add(1)
 				for {
 					m := e.makeLocationMessage()
 					t2s := e.makeTraceletToServerMessage(0)
 					t2s.Type = &pb.TraceletToServer_Location_{Location: m}
-					t2s.Metrics = makeMetricsMessage()
+					if loopCnt%3 == 0 {
+						t2s.Metrics = makeMetricsMessage()
+					}
+					loopCnt++
 
 					fmt.Printf("locationClient WriteMessage: %v\n", t2s)
 
@@ -63,13 +63,8 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 						log.Printf("locationClient WriteMessage failed, %v\n", err)
 						break
 					}
-					time.Sleep(500 * time.Millisecond)
+					time.Sleep(1000 * time.Millisecond)
 				}
-				select {
-				case quit <- true:
-				default:
-				}
-				wg.Wait()
 			}
 			time.Sleep(1000 * time.Millisecond)
 		}
@@ -105,9 +100,22 @@ func (e *Tracelet) makeLocationMessage() *pb.TraceletToServer_Location {
 			Y:                 e.loc.uwbY,
 			Z:                 e.loc.uwbZ,
 			SiteId:            0x1234,
-			LocationSignature: 0x12345678ABCD,
+			LocationSignature: 0xFEEDBEEFFEEDBEEF,
 			Eph:               0.6,
+			GroundSpeed: 8.9,
 		},
+		Fused: &pb.TraceletToServer_Location_Fused{
+			Valid:       true,
+			Latitude:    49.425133,
+			Longitude:   11.077378,
+			Altitude:    350.0,
+			Eph:         0,
+			HeadMotion:  0,
+			HeadVehicle: 0,
+			HeadValid:   0,
+			GroundSpeed: 9.0,
+		},
+
 		Direction:   pb.TraceletToServer_Location_NO_DIRECTION,
 		Speed:       9,
 		Mileage:     50899,
@@ -165,13 +173,7 @@ func makeMetricsMessage() *pb.TraceletMetrics {
 		Health__Type__UwbFirmware: 0,
 		Health__Type__GnssComm:    1,
 		FreeHeapBytes:             int64(rand.Intn(1000) + 20000),
-
-		GnssFixTypeEnum:                 int64(rand.Intn(6)),
-		GnssHeading__Info__HeadVehValid: 1,
-		GnssHeading__Info__HeadVeh:      float64(rand.Intn(360)),
-		GnssHeading__Info__HeadMot:      float64(rand.Intn(360)),
 		NtripIsConnected:                0,
-		SpeedMetersPerSecond:            float64(rand.Intn(100)),
 	}
 }
 
