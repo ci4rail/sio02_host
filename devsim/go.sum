@@ -4,6 +4,8 @@ github.com/ci4rail/io4edge_api v1.0.1-0.20241129105113-45b344808ee6 h1:9VK1iCDim
 github.com/ci4rail/io4edge_api v1.0.1-0.20241129105113-45b344808ee6/go.mod h1:QWM/pii9vHNZ1YwC+3MePA9RSAnP/iO/xVGHoWJEX0I=
 github.com/ci4rail/io4edge_api v1.0.1-0.20241201181301-5b0469fb0236 h1:BCn9aXrrIyc8+Rd4AngrtAWSsIs603BUofqp5TX5C1E=
 github.com/ci4rail/io4edge_api v1.0.1-0.20241201181301-5b0469fb0236/go.mod h1:QWM/pii9vHNZ1YwC+3MePA9RSAnP/iO/xVGHoWJEX0I=
+github.com/ci4rail/io4edge_api v1.0.1-0.20241210145133-4b005b9cd29a h1:yZcQlAHIbEcCDGolEs5HmB6t4Tud3sebcwWC1pz+Upo=
+github.com/ci4rail/io4edge_api v1.0.1-0.20241210145133-4b005b9cd29a/go.mod h1:QWM/pii9vHNZ1YwC+3MePA9RSAnP/iO/xVGHoWJEX0I=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

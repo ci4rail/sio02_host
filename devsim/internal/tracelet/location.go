@@ -39,6 +39,12 @@ type location struct {
 
 // publish location to server periodically
 func (e *Tracelet) locationClient(locationServerAddress string) error {
+	metrics := pb.TraceletMetrics{}
+	m := pb.TraceletToServer_Location{
+		Gnss: &pb.TraceletToServer_Location_Gnss{},
+		Uwb: &pb.TraceletToServer_Location_Uwb{},
+		Fused: &pb.TraceletToServer_Location_Fused{},
+	}
 	go func() {
 		loopCnt := 0
 		for {
@@ -48,11 +54,12 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 			if err == nil {
 				defer ch.Close()
 				for {
-					m := e.makeLocationMessage()
+					e.makeLocationMessage(&m)
 					t2s := e.makeTraceletToServerMessage(0)
-					t2s.Type = &pb.TraceletToServer_Location_{Location: m}
+					t2s.Type = &pb.TraceletToServer_Location_{Location: &m}
 					if loopCnt%3 == 0 {
-						t2s.Metrics = makeMetricsMessage()
+						makeMetricsMessage(loopCnt, &metrics)
+						t2s.Metrics = &metrics
 					}
 					loopCnt++
 
@@ -81,46 +88,26 @@ func (e *Tracelet) makeTraceletToServerMessage(id int32) *pb.TraceletToServer {
 	}
 }
 
-func (e *Tracelet) makeLocationMessage() *pb.TraceletToServer_Location {
+func (e *Tracelet) makeLocationMessage(m *pb.TraceletToServer_Location) {
 	e.locMutex.Lock()
 	defer e.locMutex.Unlock()
-	return &pb.TraceletToServer_Location{
-		Gnss: &pb.TraceletToServer_Location_Gnss{
-			Valid:     e.loc.gnssValid,
-			Latitude:  e.loc.gnssLat,
-			Longitude: e.loc.gnssLon,
-			Altitude:  e.loc.gnssAlt,
-			Eph:       0.4,
-			Epv:       2.5,
-			FixType:   e.loc.gnssFix,
-		},
-		Uwb: &pb.TraceletToServer_Location_Uwb{
-			Valid:             e.loc.uwbValid,
-			X:                 e.loc.uwbX,
-			Y:                 e.loc.uwbY,
-			Z:                 e.loc.uwbZ,
-			SiteId:            0x1234,
-			LocationSignature: 0xFEEDBEEFFEEDBEEF,
-			Eph:               0.6,
-			GroundSpeed: 8.9,
-		},
-		Fused: &pb.TraceletToServer_Location_Fused{
-			Valid:       true,
-			Latitude:    49.425133,
-			Longitude:   11.077378,
-			Altitude:    350.0,
-			Eph:         0,
-			HeadMotion:  0,
-			HeadVehicle: 0,
-			HeadValid:   0,
-			GroundSpeed: 9.0,
-		},
 
-		Direction:   pb.TraceletToServer_Location_NO_DIRECTION,
-		Speed:       9,
-		Mileage:     50899,
-		Temperature: 34.5,
-	}
+	m.Gnss.Valid = e.loc.gnssValid
+	m.Gnss.Latitude = e.loc.gnssLat
+	m.Gnss.Longitude = e.loc.gnssLon
+	m.Gnss.Altitude = e.loc.gnssAlt
+	m.Gnss.Eph = rand.Float64() * 3
+	m.Gnss.Epv = rand.Float64() * 5
+	m.Gnss.FixType = e.loc.gnssFix
+
+	m.Fused.Valid = true
+	m.Fused.Latitude = e.loc.gnssLat
+	m.Fused.Longitude = e.loc.gnssLon
+	m.Fused.Altitude = e.loc.gnssAlt
+	m.Fused.Eph = m.Gnss.Eph
+
+	m.Speed = rand.Float64() * 10
+	m.Temperature = rand.Float64() * 10 + 29
 }
 
 func (e *Tracelet) locationGenerator() {
@@ -128,53 +115,47 @@ func (e *Tracelet) locationGenerator() {
 
 		for {
 			loc := location{
-				uwbValid:  true,
+				uwbValid:  false,
 				uwbX:      5.0,
 				uwbY:      6.21,
 				uwbZ:      7.5,
-				gnssValid: false,
-				gnssLat:   49.425111,
-				gnssLon:   11.077378,
-				gnssAlt:   350.0,
-				gnssFix:   0,
+				gnssValid: true,
+				gnssLat:   49.425111 + rand.Float64()*0.0001,
+				gnssLon:   11.077378 + rand.Float64()*0.0001,
+				gnssAlt:   350.0 + rand.Float64()*10,
+				gnssFix:   int32(rand.Intn(6)),
 			}
 			e.locMutex.Lock()
 			e.loc = loc
 			e.locMutex.Unlock()
 
 			time.Sleep(1000 * time.Millisecond)
-
-			loc = location{
-				uwbValid:  false,
-				uwbX:      0,
-				uwbY:      1100,
-				uwbZ:      888,
-				gnssValid: true,
-				gnssLat:   49.425111,
-				gnssLon:   11.077378,
-				gnssAlt:   350.0,
-				gnssFix:   2,
-			}
-			e.locMutex.Lock()
-			e.loc = loc
-			e.locMutex.Unlock()
-
-			time.Sleep(1500 * time.Millisecond)
-
 		}
 	}()
 
 }
 
 // generate some random metrics
-func makeMetricsMessage() *pb.TraceletMetrics {
-	return &pb.TraceletMetrics{
-		Health__Type__UwbComm:     1,
-		Health__Type__UwbFirmware: 0,
-		Health__Type__GnssComm:    1,
-		FreeHeapBytes:             int64(rand.Intn(1000) + 20000),
-		NtripIsConnected:                0,
+func makeMetricsMessage(loop int, m *pb.TraceletMetrics)  {
+	m.Health__Type__UwbComm = 1
+	m.Health__Type__UwbFirmware = 0
+	m.Health__Type__GnssComm = 1
+	m.FreeHeapBytes = int64(rand.Intn(1000) + 20000)
+	m.WifiRssiDbm = 100.0 - rand.Float64() * 50
+	m.NtripIsConnected = int64(rand.Intn(2))
+	m.SntpUpdates += int64(rand.Intn(2))
+
+	if loop % 20 == 0 {
+		m.WifiAp = 123
+	} else {
+		m.WifiAp = 456
 	}
+	m.GnssNumSats__System__Gps = int64(rand.Intn(10)+3)
+	m.GnssNumSats__System__Glonass = int64(rand.Intn(10)+3)
+	m.GnssNumSats__System__Galileo = int64(rand.Intn(10)+3)
+	m.GnssNumSv = m.GnssNumSats__System__Gps + m.GnssNumSats__System__Glonass + m.GnssNumSats__System__Galileo -1 
+	m.GnssPga__Block__Rf1 = int64(rand.Intn(5)) + 40
+	m.GnssPga__Block__Rf2 = int64(rand.Intn(5)) + 36
 }
 
 func channelFromSocketAddress(address string) (*client.Channel, error) {
