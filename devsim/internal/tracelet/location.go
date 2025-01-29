@@ -91,7 +91,6 @@ func (e *Tracelet) makeTraceletToServerMessage(id int32) *pb.TraceletToServer {
 func (e *Tracelet) makeLocationMessage(m *pb.TraceletToServer_Location) {
 	e.locMutex.Lock()
 	defer e.locMutex.Unlock()
-
 	m.Gnss.Valid = e.loc.gnssValid
 	m.Gnss.Latitude = e.loc.gnssLat
 	m.Gnss.Longitude = e.loc.gnssLon
