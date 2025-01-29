@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 Ci4Rail GmbH
+Copyright © 2024 Ci4Rail GmbH
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,12 +17,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
+	"math/rand"
 	"time"
 
 	"github.com/ci4rail/io4edge-client-go/client"
-	"github.com/ci4rail/io4edge-client-go/transport"
-	"github.com/ci4rail/io4edge-client-go/transport/socket"
 	pb "github.com/ci4rail/io4edge_api/tracelet/go/tracelet"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -42,20 +40,21 @@ type location struct {
 // publish location to server periodically
 func (e *Tracelet) locationClient(locationServerAddress string) error {
 	go func() {
+		loopCnt := 0
 		for {
 			log.Printf("try to connect to %v\n", locationServerAddress)
 			ch, err := channelFromSocketAddress(locationServerAddress)
 
 			if err == nil {
 				defer ch.Close()
-				quit := make(chan bool)
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go e.commandHandler(ch, quit, &wg)
 				for {
 					m := e.makeLocationMessage()
 					t2s := e.makeTraceletToServerMessage(0)
 					t2s.Type = &pb.TraceletToServer_Location_{Location: m}
+					if loopCnt%3 == 0 {
+						t2s.Metrics = makeMetricsMessage()
+					}
+					loopCnt++
 
 					fmt.Printf("locationClient WriteMessage: %v\n", t2s)
 
@@ -64,68 +63,13 @@ func (e *Tracelet) locationClient(locationServerAddress string) error {
 						log.Printf("locationClient WriteMessage failed, %v\n", err)
 						break
 					}
-					time.Sleep(500 * time.Millisecond)
+					time.Sleep(1000 * time.Millisecond)
 				}
-				select {
-				case quit <- true:
-				default:
-				}
-				wg.Wait()
 			}
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 		}
 	}()
 	return nil
-}
-
-func (e *Tracelet) commandHandler(ch *client.Channel, quit chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		select {
-		case <-quit:
-			log.Print("commandHandler quit\n")
-			return
-		default:
-			m := &pb.ServerToTracelet{}
-			err := ch.ReadMessage(m, 0)
-			if err != nil {
-				log.Printf("commandHandler ReadMessage failed, %v. Exit command handler\n", err)
-				return
-			}
-			t2s := e.makeTraceletToServerMessage(m.Id)
-
-			switch x := m.Type.(type) {
-			case *pb.ServerToTracelet_Location:
-				{
-					fmt.Printf("commandHandler Location: %v\n", m)
-					m := e.makeLocationMessage()
-					t2s.Type = &pb.TraceletToServer_Location_{Location: m}
-				}
-			case *pb.ServerToTracelet_Status:
-				{
-					fmt.Printf("commandHandler Status: %v\n", m)
-					m := &pb.TraceletToServer_StatusResponse{
-						PowerUpCount:     123,
-						HasTime:          true,
-						UwbModuleStatus:  0,
-						GnssModuleStatus: 0,
-						Imu1Status:       0,
-						TachoStatus:      777,
-					}
-					t2s.Type = &pb.TraceletToServer_Status{Status: m}
-				}
-			default:
-				{
-					fmt.Printf("commandHandler unknown message type: %v\n", x)
-					continue
-				}
-			}
-			err = ch.WriteMessage(t2s)
-			if err != nil {
-				log.Printf("commandHandler WriteMessage failed, %v\n", err)
-			}
-		}
-	}
 }
 
 func (e *Tracelet) makeTraceletToServerMessage(id int32) *pb.TraceletToServer {
@@ -156,9 +100,22 @@ func (e *Tracelet) makeLocationMessage() *pb.TraceletToServer_Location {
 			Y:                 e.loc.uwbY,
 			Z:                 e.loc.uwbZ,
 			SiteId:            0x1234,
-			LocationSignature: 0x12345678ABCD,
+			LocationSignature: 0xFEEDBEEFFEEDBEEF,
 			Eph:               0.6,
+			GroundSpeed: 8.9,
 		},
+		Fused: &pb.TraceletToServer_Location_Fused{
+			Valid:       true,
+			Latitude:    49.425133,
+			Longitude:   11.077378,
+			Altitude:    350.0,
+			Eph:         0,
+			HeadMotion:  0,
+			HeadVehicle: 0,
+			HeadValid:   0,
+			GroundSpeed: 9.0,
+		},
+
 		Direction:   pb.TraceletToServer_Location_NO_DIRECTION,
 		Speed:       9,
 		Mileage:     50899,
@@ -209,13 +166,22 @@ func (e *Tracelet) locationGenerator() {
 
 }
 
-func channelFromSocketAddress(address string) (*client.Channel, error) {
-	t, err := socket.NewSocketConnection(address)
-	if err != nil {
-		return nil, errors.New("can't create connection: " + err.Error())
+// generate some random metrics
+func makeMetricsMessage() *pb.TraceletMetrics {
+	return &pb.TraceletMetrics{
+		Health__Type__UwbComm:     1,
+		Health__Type__UwbFirmware: 0,
+		Health__Type__GnssComm:    1,
+		FreeHeapBytes:             int64(rand.Intn(1000) + 20000),
+		NtripIsConnected:                0,
 	}
-	ms := transport.NewFramedStreamFromTransport(t)
-	ch := client.NewChannel(ms)
+}
 
-	return ch, nil
+func channelFromSocketAddress(address string) (*client.Channel, error) {
+	c, err := client.NewUDPClientFromSocketAddress(address)
+	if err != nil {
+		return nil, errors.New("can't create UDP client: " + err.Error())
+	}
+
+	return c.Ch, nil
 }

@@ -1,91 +1,72 @@
 #!/usr/bin/env python3
 
-import socketserver
+import socket
 import time
-import threading
 # ensure that the io4edge_api package is in the PYTHONPATH
 import io4edge_api.tracelet.python.v1.tracelet_pb2 as tracelet_pb2
 import struct
 
+# map of client address to Client object
+CLIENTS = {}
 
-class MyTCPHandler(socketserver.BaseRequestHandler):
-    """
-    The RequestHandler class for our server.
-
-    It is instantiated once per connection to the server, and must
-    override the handle() method to implement communication to the
-    client.
-    """
-
-    def handle(self):
-        print('new handler %s\n' % threading.current_thread().name)
-        self.command_thread_exit = False
-        self.command_thread = threading.Thread(target=self.command_requester)
-        self.command_thread.start()
-        while True:
-            m = self.read_fstream()
-            print(f'message from {m.tracelet_id}, ts={m.delivery_ts.ToDatetime()}')
-            t = m.WhichOneof('type')
-            if t == 'status':
-                print(f'  status: powerups: {m.status.power_up_count}')
-            elif t == 'location':
-                loc = m.location
-                print(
-                    f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n'
-                    f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}')
-
-    def server_close(self):
-        print('server close')
-        self.command_thread_exit = True
-        self.command_thread.join()
-        super().server_close()
-
-    def command_requester(self):
-        while not self.command_thread_exit:
-            time.sleep(3)
-            statusReq = tracelet_pb2.ServerToTracelet.StatusRequest()
-            req = tracelet_pb2.ServerToTracelet(id=1)
-            req.status.CopyFrom(statusReq)
-            data = req.SerializeToString()
-            self.send(data)
-        print("exit command requester")
-
-    def send(self, data):
-        hdr = struct.pack("<HL", 0xEDFE, len(data))
-        self.request.sendall(hdr + data)
-
-    def rcv_all(self, n):
-        remaining = n
-        buf = bytearray()
-        while remaining > 0:
-            data = self.request.recv(remaining)
-            buf.extend(data)
-            remaining -= len(data)
-        return buf
-
-    def read_fstream(self):
-        hdr = self.rcv_all(6)
-        if hdr[0:2] == b'\xfe\xed':
-            len = struct.unpack('<L', hdr[2:6])[0]
-            # print(f'len={len} {hdr[0:6]}')
-            proto_data = self.rcv_all(len)
-            loc = tracelet_pb2.TraceletToServer()
-            loc.ParseFromString(proto_data)
-            return loc
+class Client:
+    def __init__(self, address: str):
+        self.address = address
+        self.last_seq = None
+        self.last_msg_ts = None
+        
+    def process_message(self, message: bytes):
+        seq = struct.unpack('<L', message[0:4])[0]
+        payload = message[4:]
+        
+        print(f'Client {self.address} received seq={seq}')
+        
+        if self.last_seq is None or (seq-self.last_seq >= 1 and seq-self.last_seq <= 100):
+            self.last_seq = seq
+            self.last_msg_ts = time.time()
+            self.process_payload(payload)
         else:
-            raise RuntimeError('bad magic')
-
-
-class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
-
+            print(f'Client {self.address} ignore dup message: {seq})')    
+        
+        # ack message
+        ack = struct.pack('<L', seq)
+        server_socket.sendto(ack, self.address)
+        
+    def process_payload(self, data: bytes):
+        m = tracelet_pb2.TraceletToServer()
+        m.ParseFromString(data)
+        print(f'message from {m.tracelet_id}, ts={m.delivery_ts.ToDatetime()}')
+        t = m.WhichOneof('type')
+        if t == 'location':
+            loc = m.location
+            print(
+                f'   FUSED: valid {loc.fused.valid} {loc.fused.latitude:.2f} {loc.fused.longitude:.2f} eph {loc.fused.eph}\n'
+                f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n'
+                f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}')
+        print(f'   metrics: {m.metrics}')    
+            
 
 if __name__ == '__main__':
-    HOST, PORT = '0.0.0.0', 11002
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = ('', 11002)
+    server_socket.bind(server_address)
+    server_socket.settimeout(5)  
 
-    # Create the server, binding to localhost on specified port
-    server = ThreadedTCPServer((HOST, PORT), MyTCPHandler)
+    while True:
+        print('Waiting to receive message...')
+        try:
+            data, address = server_socket.recvfrom(4096)
+            #print(f'Received {len(data)} bytes from {address}')
+            
+            if address in CLIENTS:
+                client = CLIENTS[address]
+            else:
+                print(f'New client {address}')
+                client = Client(address)
+                CLIENTS[address] = client
 
-    # Activate the server; this will keep running until you
-    # interrupt the program with Ctrl-C
-    server.serve_forever()
+            client.process_message(data)
+        except socket.timeout:
+            print('Timeout waiting for message')
+            pass
+
