@@ -44,6 +44,7 @@ class Client:
                 f'     UWB: valid {loc.uwb.valid} {loc.uwb.x:.2f} {loc.uwb.y:.2f} site:{loc.uwb.site_id} eph {loc.uwb.eph}\n'
                 f'    GNSS: valid {loc.gnss.valid} {loc.gnss.latitude:.6f} {loc.gnss.longitude:.6f} eph {loc.gnss.eph:.2f}')
         print(f'   metrics: {m.metrics}')    
+        print()
             
 
 if __name__ == '__main__':
